@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Budget & Savings Tool</title>
     <style>
+        /* Root variables for theming */
         :root {
             --background-color: #f0f2f5;
             --container-color: #ffffff;
@@ -14,6 +15,7 @@
             --button-bg-color: #007bff;
             --button-hover-bg-color: #0056b3;
             --progress-bg-color: #e0e0e0;
+            --progress-fill-color: #007bff;
             --spending-color: #007bff;
             --emergency-savings-color: #28a745;
             --investments-color: #ffc107;
@@ -22,6 +24,7 @@
             --tooltip-text-color: #fff;
         }
 
+        /* Dark mode variables */
         [data-theme="dark"] {
             --background-color: #333333;
             --container-color: #444444;
@@ -31,6 +34,7 @@
             --button-bg-color: #0066cc;
             --button-hover-bg-color: #004499;
             --progress-bg-color: #666666;
+            --progress-fill-color: #6699ff;
             --spending-color: #6699ff;
             --emergency-savings-color: #44cc44;
             --investments-color: #ffcc66;
@@ -39,6 +43,7 @@
             --tooltip-text-color: #f0f2f5;
         }
 
+        /* Basic styles for layout and elements */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--background-color);
@@ -72,8 +77,8 @@
             text-align: center;
         }
 
-        input[type="number"],
-        select {
+        /* Input and button styling */
+        input[type="number"], select {
             width: 100%;
             padding: 15px;
             margin: 10px 0;
@@ -109,13 +114,13 @@
             margin-top: 20px;
         }
 
-        .results,
-        .visualization {
+        /* Results and Visualization section styling */
+        .results, .visualization {
             margin-top: 30px;
         }
 
         .result-item {
-            padding: 15px 0;
+            padding: 10px 0;
             border-bottom: 1px solid var(--input-border-color);
             font-size: 18px;
         }
@@ -130,23 +135,32 @@
             background-color: var(--progress-bg-color);
             border-radius: 12px;
             overflow: hidden;
-            margin-top: 10px;
+            margin-top: 20px;
         }
 
         .progress-fill {
             height: 100%;
+            background-color: var(--progress-fill-color);
             border-radius: 12px;
             transition: width 0.4s ease;
         }
 
         .progress-text {
             text-align: center;
-            font-size: 14px;
-            margin-top: 5px;
+            font-size: 16px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 300px; /* Fixed chart size */
+            margin-top: 20px;
         }
 
         canvas {
-            margin-top: 20px;
+            max-width: 100%; /* Ensure canvas does not exceed container */
+            height: auto;
         }
 
         #goalSection {
@@ -166,17 +180,13 @@
             margin-right: 10px;
         }
 
-        .chart-container {
-            position: relative;
-            width: 100%;
-            height: 300px;
-        }
-
+        /* Dark mode toggle button */
         #darkModeToggle {
             position: absolute;
             top: 15px;
             right: 15px;
             cursor: pointer;
+            font-size: 14px;
         }
 
         .tooltip {
@@ -207,6 +217,7 @@
             opacity: 1;
         }
 
+        /* Footer styling */
         footer {
             text-align: center;
             margin-top: 20px;
@@ -223,10 +234,20 @@
         footer a:hover {
             color: var(--button-bg-color);
         }
+
+        /* Media query for responsive dark mode toggle */
+        @media (max-width: 600px) {
+            #darkModeToggle {
+                font-size: 12px;
+                top: 10px;
+                right: 10px;
+            }
+        }
     </style>
 </head>
 <body data-theme="light">
     <div class="container">
+        <!-- Dark Mode Toggle -->
         <div id="darkModeToggle">
             <label>
                 <input type="checkbox" onchange="toggleDarkMode()"> Dark Mode
@@ -235,6 +256,7 @@
         <h1>Budget & Savings Tool</h1>
         <input type="number" id="payInput" placeholder="Enter your pay amount" min="0" step="0.01" required>
         
+        <!-- Pay Frequency Selector -->
         <label for="payFrequency">Select Pay Frequency:</label>
         <select id="payFrequency">
             <option value="weekly">Weekly</option>
@@ -242,6 +264,7 @@
             <option value="monthly" selected>Monthly</option>
         </select>
         
+        <!-- Savings Goal Section -->
         <label>
             <input type="checkbox" id="goalToggle" onclick="toggleGoalSection()">
             Set a Savings Goal
@@ -255,166 +278,205 @@
             <input type="number" id="timeFrameInput" placeholder="Enter your time frame in months" min="1">
         </div>
 
+        <!-- Buttons for Calculate and Reset -->
         <div class="buttons-container">
             <button onclick="calculateBudget()">Calculate</button>
             <button onclick="resetForm()">Reset</button>
         </div>
 
+        <!-- Section for displaying results -->
         <div class="results" id="results">
             <!-- Budget results will be displayed here -->
         </div>
+
+        <!-- Section for visualization -->
         <div class="visualization" id="visualization">
             <!-- Visualization will be displayed here -->
         </div>
     </div>
 
+    <!-- Importing Chart.js library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         let chartInstance = null;
 
-        // Toggle the visibility of the savings goal section
+        /**
+         * Toggle the visibility of the savings goal section
+         */
         function toggleGoalSection() {
             const goalSection = document.getElementById('goalSection');
-            const goalToggle = document.getElementById('goalToggle');
-
-            if (goalToggle.checked) {
-                goalSection.style.display = 'block';
-            } else {
-                goalSection.style.display = 'none';
-            }
+            goalSection.style.display = document.getElementById('goalToggle').checked ? 'block' : 'none';
         }
 
-        // Dark mode toggle function
+        /**
+         * Toggle between light and dark mode
+         */
         function toggleDarkMode() {
             const body = document.body;
             body.dataset.theme = body.dataset.theme === 'light' ? 'dark' : 'light';
 
-            // Update chart legend text color
+            // Update chart legend text color when mode changes
             if (chartInstance) {
-                chartInstance.options.plugins.legend.labels.color = getComputedStyle(document.body).getPropertyValue('--chart-text-color');
+                chartInstance.options.plugins.legend.labels.color = getComputedStyle(body).getPropertyValue('--chart-text-color');
                 chartInstance.update();
             }
         }
 
-        // Allow form submission via Enter key
-        document.querySelectorAll('input').forEach(input => {
-            input.addEventListener('keypress', function(event) {
-                if (event.key === 'Enter') {
-                    event.preventDefault();
-                    calculateBudget();
-                }
-            });
-        });
-
-        // Function to validate input fields
+        /**
+         * Validate if the input is a positive number
+         * @param {number} value - The value to validate
+         * @returns {boolean} - Returns true if valid, false otherwise
+         */
         function validateInput(value) {
             return !isNaN(value) && value > 0;
         }
 
-                // Function to calculate and display budget
-                function calculateBudget() {
+        /**
+         * Calculate and display the budget and savings information
+         */
+        function calculateBudget() {
             const pay = parseFloat(document.getElementById('payInput').value);
             const payFrequency = document.getElementById('payFrequency').value;
 
-            // Validate main input
             if (!validateInput(pay)) {
                 alert("Please enter a valid pay amount.");
                 return;
             }
 
-            let adjustedPay = pay;
-
-            // Adjust pay based on frequency (no need to multiply by anything)
-            switch (payFrequency) {
-                case 'weekly':
-                    adjustedPay = pay;
-                    break;
-                case 'bi-weekly':
-                    adjustedPay = pay;
-                    break;
-                case 'monthly':
-                    adjustedPay = pay;
-                    break;
-            }
-
-            // Calculate budget allocations
+            const adjustedPay = adjustPayForFrequency(pay, payFrequency);
             const spending = (adjustedPay * 0.75).toFixed(2);
             const emergencySavings = (adjustedPay * 0.10).toFixed(2);
             const investments = (adjustedPay * 0.15).toFixed(2);
 
-            // Update budget results
-            document.getElementById('results').innerHTML = `
-                <div class="result-item"><strong>Total ${capitalizeFirstLetter(payFrequency)} Spending:</strong> $${spending}</div>
+            // Determine if a savings goal is set
+            const isGoalSet = document.getElementById('goalToggle').checked;
+            const savingsForGoal = isGoalSet ? (spending * 0.25).toFixed(2) : null;
+
+            displayBudgetResults(payFrequency, spending, emergencySavings, investments, savingsForGoal);
+
+            if (isGoalSet) {
+                handleSavingsGoal(spending, payFrequency, emergencySavings, investments);
+            } else {
+                displayVisualization([spending, emergencySavings, investments], ['Spending', 'Emergency Savings', 'Investments']);
+            }
+
+            scrollToTop();
+        }
+
+        /**
+         * Adjust pay based on the selected frequency
+         * @param {number} pay - The original pay amount
+         * @param {string} frequency - The pay frequency (weekly, bi-weekly, monthly)
+         * @returns {number} - The adjusted pay amount
+         */
+        function adjustPayForFrequency(pay, frequency) {
+            switch (frequency) {
+                case 'weekly':
+                case 'bi-weekly':
+                case 'monthly':
+                    return pay;
+                default:
+                    return pay;
+            }
+        }
+
+        /**
+         * Display the calculated budget results
+         * @param {string} frequency - The pay frequency
+         * @param {string} spending - The calculated spending amount
+         * @param {string} emergencySavings - The calculated emergency savings amount
+         * @param {string} investments - The calculated investments amount
+         * @param {string|null} savingsForGoal - The savings amount for the goal (if set)
+         */
+        function displayBudgetResults(frequency, spending, emergencySavings, investments, savingsForGoal) {
+            let resultHTML = `
+                <div class="result-item"><strong>Total ${capitalizeFirstLetter(frequency)} Spending:</strong> $${spending}</div>
+            `;
+
+            if (savingsForGoal !== null) {
+                resultHTML += `<div class="result-item"><strong>Savings for Goal:</strong> $${savingsForGoal}</div>`;
+            }
+
+            resultHTML += `
                 <div class="result-item"><strong>Emergency Savings:</strong> $${emergencySavings}</div>
                 <div class="result-item"><strong>Investments:</strong> $${investments}</div>
             `;
 
-            // Check if the savings goal section is enabled
-            const isGoalSet = document.getElementById('goalToggle').checked;
-            if (isGoalSet) {
-                const goal = parseFloat(document.getElementById('goalInput').value);
-                const timeFrame = parseInt(document.getElementById('timeFrameInput').value);
+            document.getElementById('results').innerHTML = resultHTML;
+        }
 
-                // Validate goal and time frame inputs
-                if (!validateInput(goal) || !validateInput(timeFrame)) {
-                    alert("Please enter valid values for your savings goal and time frame.");
-                    return;
-                }
+        /**
+         * Handle the savings goal calculations and visualization
+         * @param {string} spending - The calculated spending amount
+         * @param {string} frequency - The pay frequency
+         * @param {string} emergencySavings - The calculated emergency savings amount
+         * @param {string} investments - The calculated investments amount
+         */
+        function handleSavingsGoal(spending, frequency, emergencySavings, investments) {
+            const goal = parseFloat(document.getElementById('goalInput').value);
+            const timeFrame = parseInt(document.getElementById('timeFrameInput').value);
 
-                const amountSavedTowardsGoal = (goal / timeFrame).toFixed(2);
-                const remainingSpending = (spending - amountSavedTowardsGoal).toFixed(2);
-                const totalSavings = (amountSavedTowardsGoal * timeFrame).toFixed(2);
-                const progressPercentage = Math.min((totalSavings / goal) * 100, 100);
-                const progressColor = progressPercentage >= 100 ? 'green' : progressPercentage >= 50 ? 'yellow' : 'red';
-                const progressText = progressPercentage >= 100 
-                    ? "Goal Achieved!" 
-                    : progressPercentage >= 50 
-                    ? "On Track" 
-                    : "Behind Schedule";
-
-                document.getElementById('results').innerHTML = `
-                    <div class="result-item"><strong>Total ${capitalizeFirstLetter(payFrequency)} Spending:</strong> $${remainingSpending}</div>
-                    <div class="result-item"><strong>Amount Saved Towards Goal Per ${capitalizeFirstLetter(payFrequency)}:</strong> $${amountSavedTowardsGoal}</div>
-                    <div class="result-item"><strong>Emergency Savings:</strong> $${emergencySavings}</div>
-                    <div class="result-item"><strong>Investments:</strong> $${investments}</div>
-                `;
-
-                document.getElementById('visualization').innerHTML = `
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${progressPercentage}%; background-color: ${progressColor};"></div>
-                    </div>
-                    <div class="progress-text">${progressText} - ${progressPercentage.toFixed(2)}%</div>
-                    <div class="chart-container">
-                        <canvas id="budgetChart"></canvas>
-                    </div>
-                `;
-            } else {
-                document.getElementById('visualization').innerHTML = `
-                    <div class="chart-container">
-                        <canvas id="budgetChart"></canvas>
-                    </div>
-                `;
+            if (!validateInput(goal) || !validateInput(timeFrame)) {
+                alert("Please enter valid values for your savings goal and time frame.");
+                return;
             }
 
-            // Destroy existing chart instance if it exists
+            const amountSavedTowardsGoal = (goal / timeFrame).toFixed(2);
+            const remainingSpending = (spending - amountSavedTowardsGoal).toFixed(2);
+            const progressPercentage = Math.min((amountSavedTowardsGoal * timeFrame / goal) * 100, 100);
+
+            let progressText = "";
+            const weeksNeeded = (goal / amountSavedTowardsGoal).toFixed(2);
+            const differenceInWeeks = weeksNeeded - timeFrame;
+
+            if (progressPercentage >= 100) {
+                progressText = `Goal Achieved! You will reach your goal in ${weeksNeeded} weeks, which is on track.`;
+            } else if (progressPercentage >= 50) {
+                progressText = `You are on track to save $${(amountSavedTowardsGoal * timeFrame).toFixed(2)} over ${timeFrame} months, but you will need ${Math.abs(differenceInWeeks)} more weeks to reach your goal.`;
+            } else {
+                progressText = `You may need to adjust your budget. At this rate, you will save $${(amountSavedTowardsGoal * timeFrame).toFixed(2)}, which is ${Math.abs(differenceInWeeks)} weeks short of your goal.`;
+            }
+
+            displayBudgetResults(frequency, remainingSpending, emergencySavings, investments, amountSavedTowardsGoal);
+            displaySavingsVisualization(progressPercentage, progressText, [amountSavedTowardsGoal, emergencySavings, investments]);
+        }
+
+        /**
+         * Display the savings progress visualization
+         * @param {number} progressPercentage - The progress percentage
+         * @param {string} progressText - The progress text
+         * @param {array} chartData - The data for the chart
+         */
+        function displaySavingsVisualization(progressPercentage, progressText, chartData) {
+            document.getElementById('visualization').innerHTML = `
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${progressPercentage}%;"></div>
+                </div>
+                <div class="progress-text">${progressText}</div>
+                <div class="chart-container">
+                    <canvas id="budgetChart"></canvas>
+                </div>
+            `;
+            displayVisualization(chartData, ['Savings for Goal', 'Emergency Savings', 'Investments']);
+        }
+
+        /**
+         * Display the budget visualization using Chart.js
+         * @param {array} data - The data to display
+         * @param {array} labels - The labels for the data
+         */
+        function displayVisualization(data, labels) {
             if (chartInstance !== null) {
                 chartInstance.destroy();
             }
 
-            // Create a new chart
             const ctx = document.getElementById('budgetChart').getContext('2d');
-            const chartData = isGoalSet
-                ? [amountSavedTowardsGoal, emergencySavings, investments]
-                : [spending, emergencySavings, investments];
-
             chartInstance = new Chart(ctx, {
                 type: 'pie',
                 data: {
-                    labels: isGoalSet
-                        ? ['Savings for Goal', 'Emergency Savings', 'Investments']
-                        : ['Spending', 'Emergency Savings', 'Investments'],
+                    labels: labels,
                     datasets: [{
-                        data: chartData,
+                        data: data,
                         backgroundColor: ['#007bff', '#28a745', '#ffc107'],
                         hoverBackgroundColor: ['#0056b3', '#218838', '#e0a800'],
                         borderColor: 'transparent'
@@ -434,27 +496,38 @@
                     }
                 }
             });
-
-            // Scroll to the top after calculation
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        // Helper function to capitalize the first letter
+        /**
+         * Helper function to capitalize the first letter of a string
+         * @param {string} string - The string to capitalize
+         * @returns {string} - The capitalized string
+         */
         function capitalizeFirstLetter(string) {
             return string.charAt(0).toUpperCase() + string.slice(1);
         }
 
-        // Function to reset the form to default state
+        /**
+         * Scroll to the top of the page after calculation
+         */
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        /**
+         * Reset the form and visualization to default state
+         */
         function resetForm() {
             document.getElementById('payInput').value = '';
             document.getElementById('payFrequency').value = 'monthly';
             document.getElementById('goalToggle').checked = false;
-            toggleGoalSection();  // This will hide the goal section
+            toggleGoalSection();  // Hide the goal section
             document.getElementById('goalInput').value = '';
             document.getElementById('timeFrameInput').value = '';
             document.getElementById('results').innerHTML = '';
             document.getElementById('visualization').innerHTML = '';
 
+            // Destroy the existing chart instance if it exists
             if (chartInstance !== null) {
                 chartInstance.destroy();
                 chartInstance = null;
@@ -462,7 +535,7 @@
         }
     </script>
 
-    <!-- Copyright Notice -->
+    <!-- Footer Section -->
     <footer>
         <p>&copy; 2024 Matthew Burns. All Rights Reserved.</p>
         <p><a href="https://github.com/mburns00/Budget-Savings-Tool/tree/main" target="_blank">GitHub Repository</a></p>
